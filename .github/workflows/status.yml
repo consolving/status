@@ -1,0 +1,65 @@
+name: status check
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: status-check
+  cancel-in-progress: false
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check hosts and update history
+        run: python3 scripts/check.py
+
+      - name: Commit history
+        run: |
+          git config user.name "status-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No history changes"
+          else
+            git commit -m "check: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for i in 1 2 3; do
+              if git push origin HEAD; then
+                break
+              fi
+              echo "push failed (attempt $i), rebasing"
+              if [ "$i" = "3" ]; then
+                exit 1
+              fi
+              git pull --rebase --autostash origin "$GITHUB_REF_NAME"
+            done
+          fi
+
+      - name: Generate site
+        run: python3 scripts/generate.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

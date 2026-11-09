@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>consolving status</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --ok: #16a34a; --ok-bg: #f0fdf4;
+    --warning: #d97706; --warning-bg: #fffbeb;
+    --error: #dc2626; --error-bg: #fef2f2;
+    --nodata: #a8a29e; --nodata-bg: #fafaf9;
+    --border: #e7e5e4; --muted: #78716c; --text: #1c1917;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1rem 4rem;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f5f5f4; color: var(--text);
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; }
+  h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.02em; }
+  .updated { color: var(--muted); font-size: 0.8rem; }
+  .banner {
+    padding: 1.1rem 1.4rem; border-radius: 10px; border: 1px solid;
+    font-size: 1.05rem; font-weight: 600; margin-bottom: 1.5rem;
+  }
+  .banner.ok      { background: var(--ok-bg);      border-color: var(--ok);      color: var(--ok); }
+  .banner.warning { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+  .banner.error   { background: var(--error-bg);   border-color: var(--error);   color: var(--error); }
+  .banner.nodata  { background: var(--nodata-bg);  border-color: var(--border);  color: var(--muted); }
+  .host {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.1rem 1.4rem; margin-bottom: 1rem;
+  }
+  .host-head { display: flex; align-items: center; gap: 0.75rem; }
+  .host-head h2 { font-size: 1rem; margin: 0; font-weight: 600; }
+  .latency { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
+  .error-line { color: var(--error); font-size: 0.85rem; margin: 0.4rem 0 0; }
+  .badge {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 0.15rem 0.55rem; border-radius: 99px;
+  }
+  .badge.ok      { background: var(--ok-bg);      color: var(--ok); }
+  .badge.warning { background: var(--warning-bg); color: var(--warning); }
+  .badge.error   { background: var(--error-bg);   color: var(--error); }
+  .badge.nodata  { background: var(--nodata-bg);  color: var(--nodata); }
+  .strip { display: flex; gap: 2px; margin: 0.9rem 0 0.7rem; }
+  .day { flex: 1; height: 30px; border-radius: 2px; min-width: 2px; }
+  .day.ok      { background: var(--ok); }
+  .day.warning { background: var(--warning); }
+  .day.error   { background: var(--error); }
+  .day.nodata  { background: var(--border); }
+  .cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin: 0.2rem 0 0.9rem; }
+  .cat { border: 1px solid var(--border); border-radius: 6px; padding: 0.45rem 0.7rem; display: flex; justify-content: space-between; align-items: baseline; }
+  .cat-name { font-size: 0.78rem; color: var(--muted); }
+  .cat-sev { font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .cat.ok .cat-sev { color: var(--ok); }
+  .cat.warning .cat-sev { color: var(--warning); }
+  .cat.error .cat-sev { color: var(--error); }
+  .uptimes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .uptime { display: flex; gap: 0.5rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .uptime-label { color: var(--muted); }
+  h3 { font-size: 1rem; margin: 2rem 0 0.7rem; }
+  .incidents { list-style: none; padding: 0; margin: 0; }
+  .incidents li { padding: 0.45rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  .incidents .ts { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; margin-right: 0.5rem; }
+  .muted { color: var(--muted); font-size: 0.88rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>consolving status</h1>
+    <span class="updated">updated <!-- GENERATED --></span>
+  </header>
+
+  <div class="banner <!-- OVERALL_CLASS -->"><!-- OVERALL_MESSAGE --></div>
+
+  <!-- CONTENT -->
+
+  <h3>Recent incidents</h3>
+  <!-- INCIDENTS -->
+</main>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "hosts": [
+    { "name": "host1.consolving.net", "url": "http://host1.consolving.net:11012/health" },
+    { "name": "host2.consolving.net", "url": "http://host2.consolving.net:11012/health" },
+    { "name": "git-lab.de", "url": "http://git-lab.de:11012/health" },
+    { "name": "bbb.consolving.de", "url": "http://bbb.consolving.de:11012/health" }
+  ]
+}
