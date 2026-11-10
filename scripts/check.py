@@ -22,7 +22,7 @@ from pathlib import Path
 # Retention: how many period files to keep (applied after every run).
 RETENTION = {"daily": 90, "weekly": 104, "monthly": 24}  # yearly: keep all
 
-CHECK_TIMEOUT = 15  # seconds per host
+CHECK_TIMEOUT = 30  # seconds per host (host1's daemon takes ~6s: many docker inspects + ldap + hairpin)
 SEVERITY = {"ok": 0, "warning": 1, "error": 2}
 STATUS_CATEGORIES = ("infrastructure", "workloads")
 
