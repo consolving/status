@@ -2,10 +2,11 @@ name: status check
 
 on:
   schedule:
-    # Every 30 min, offset from :00/:30 — GitHub drops queued scheduled jobs
-    # at the top of the hour under load (docs: "schedule event can be
-    # delayed... some queued jobs may be dropped").
-    - cron: "7,37 * * * *"
+    # GitHub drops the vast majority of scheduled events for this repo
+    # (observed: ~4 of 48 per day with a */30 cron, independent of the slot).
+    # Fire every 5 minutes instead; the dedupe step keeps the effective
+    # cadence at ~30 minutes, so dropped events don't matter.
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,12 +29,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Dedupe schedule fires (run at most every ~30 min)
+        id: dedupe
+        run: |
+          last=$(git log -1 --format=%cI -- data/)
+          if [ -z "$last" ]; then
+            echo "No history yet — running."
+            exit 0
+          fi
+          last_ts=$(date -u -d "$last" +%s)
+          now_ts=$(date -u +%s)
+          age_min=$(( (now_ts - last_ts) / 60 ))
+          echo "Last data commit: $last (${age_min} min ago)"
+          if [ "$age_min" -lt 26 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check hosts and update history
+        if: steps.dedupe.outputs.skip != 'true'
         env:
           HEALTH_STATUS_TOKEN: ${{ secrets.HEALTH_STATUS_TOKEN }}
         run: python3 scripts/check.py
 
       - name: Commit history
+        if: steps.dedupe.outputs.skip != 'true'
         run: |
           git config user.name "status-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,16 +74,20 @@ jobs:
           fi
 
       - name: Generate site
+        if: steps.dedupe.outputs.skip != 'true'
         run: python3 scripts/generate.py
 
       - name: Configure Pages
+        if: steps.dedupe.outputs.skip != 'true'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: steps.dedupe.outputs.skip != 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
       - name: Deploy to GitHub Pages
+        if: steps.dedupe.outputs.skip != 'true'
         id: deployment
         uses: actions/deploy-pages@v4
