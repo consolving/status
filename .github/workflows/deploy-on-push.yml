@@ -1,0 +1,47 @@
+name: deploy on push
+
+# Single deploy path: runs on every push to main (host-side checker pushes,
+# status-bot pushes, code pushes) and re-renders the site from the pushed
+# data. The scheduled workflow no longer deploys itself.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "scripts/**"
+      - "assets/**"
+      - "config/**"
+      - ".github/workflows/deploy-on-push.yml"
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Generate site
+        run: python3 scripts/generate.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
