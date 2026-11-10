@@ -26,6 +26,8 @@ jobs:
           fetch-depth: 0
 
       - name: Check hosts and update history
+        env:
+          HEALTH_STATUS_TOKEN: ${{ secrets.HEALTH_STATUS_TOKEN }}
         run: python3 scripts/check.py
 
       - name: Commit history

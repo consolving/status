@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -85,7 +86,7 @@ def append_to(path: Path, entry: dict) -> None:
     path.write_text(compact(entries) + "\n", encoding="utf-8")
 
 
-def check_host(host: dict) -> dict:
+def check_host(host: dict, token: str = "") -> dict:
     """Check one host, return the result entry."""
     url = host["url"]
     result = {
@@ -98,7 +99,10 @@ def check_host(host: dict) -> dict:
     }
     started = utcnow()
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "consolving-status/1.0"})
+        headers = {"User-Agent": "consolving-status/1.0"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=CHECK_TIMEOUT) as resp:
             body = resp.read()
             result["http_status"] = resp.status
@@ -161,6 +165,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="config/hosts.json")
     parser.add_argument("--data-dir", default="data")
+    parser.add_argument("--token", default=os.environ.get("HEALTH_STATUS_TOKEN", ""),
+                        help="bearer token for the hosts' health-status daemons "
+                             "(default: $HEALTH_STATUS_TOKEN)")
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -179,7 +186,8 @@ def main() -> int:
 
     hosts = config["hosts"]
     with ThreadPoolExecutor(max_workers=min(8, len(hosts))) as pool:
-        results = dict(zip([h["name"] for h in hosts], pool.map(check_host, hosts)))
+        results = dict(zip([h["name"] for h in hosts],
+                           pool.map(lambda host: check_host(host, args.token), hosts)))
 
     entry = {"timestamp": stamp, "hosts": results}
     for name, result in results.items():
