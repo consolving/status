@@ -39,10 +39,22 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 
 ## Workflow
 
-- `.github/workflows/status.yml`: cron `7,37 * * * *` (every 30 min, offset
-  from :00/:30 — GitHub drops queued scheduled jobs at the top of the hour),
-  concurrency group `status-check`, commits `data/` as `status-bot`, deploys
-  `site/` via actions/deploy-pages. Do not split into multiple workflows.
+- Primary check path: **host-side** — `status-checker.timer` on host1 runs
+  `scripts/check.py` and pushes `data/` (deploy key). Every push to `main`
+  triggers `.github/workflows/deploy-on-push.yml` (the only deploy path).
+- Backup: `.github/workflows/status.yml` (`*/5` cron + dedupe step,
+  `status-bot` commits) — check + commit only, **no deploy steps** (GitHub
+  drops ~90% of its scheduled events, so deploys never hang off it).
+- Secrets: `HEALTH_STATUS_TOKEN` (bearer token for the daemons).
+- Do not split deploy-on-push into the scheduled workflow.
+
+## Dedupe semantics
+
+- Both check paths append to `data/`; entries carry their own UTC timestamps,
+  so gaps/duplicates never distort uptime math (uptime = runs without error /
+  total runs).
+- The scheduled workflow's dedupe step skips runs when the newest `data/`
+  commit is younger than 26 minutes.
 
 ## Conventions
 

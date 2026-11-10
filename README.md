@@ -3,11 +3,17 @@
 Static status page for consolving services, deployed via GitHub Pages at
 **https://status.consolving.de**.
 
-A GitHub Action runs every 30 minutes (at :07 and :37, off GitHub's
-high-load slot at :00/:30), checks all configured hosts via their
-`/health` endpoint, appends the result to rolling history files
-(daily / weekly / monthly / yearly) and regenerates the static HTML page from
-that history.
+A GitHub Action runs every 30 minutes (see workflow) and re-renders the
+static HTML page from the check history. Two check paths exist:
+
+1. **Primary — host-side checker** (`host1.consolving.net`): a systemd timer
+   (`status-checker.timer`, :12/:42) runs `scripts/check.py` locally and
+   pushes `data/` to GitHub via a deploy key (`/opt/status-checker/`).
+   Every push to `main` triggers `.github/workflows/deploy-on-push.yml`,
+   which re-renders and deploys the page. This path is reliable — GitHub
+   drops the vast majority of scheduled workflow events.
+2. **Backup — scheduled workflow** (`status.yml`, `*/5` + dedupe to ~30 min):
+   checks + commits only, no deploy. Exists in case host1 is down.
 
 ## How it works
 
