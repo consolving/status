@@ -2,7 +2,10 @@ name: status check
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Every 30 min, offset from :00/:30 — GitHub drops queued scheduled jobs
+    # at the top of the hour under load (docs: "schedule event can be
+    # delayed... some queued jobs may be dropped").
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 permissions:
