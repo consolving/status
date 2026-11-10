@@ -3,7 +3,8 @@
 Static status page for consolving services, deployed via GitHub Pages at
 **https://status.consolving.de**.
 
-A GitHub Action runs every 30 minutes, checks all configured hosts via their
+A GitHub Action runs every 30 minutes (at :07 and :37, off GitHub's
+high-load slot at :00/:30), checks all configured hosts via their
 `/health` endpoint, appends the result to rolling history files
 (daily / weekly / monthly / yearly) and regenerates the static HTML page from
 that history.

@@ -39,9 +39,10 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 
 ## Workflow
 
-- `.github/workflows/status.yml`: cron `*/30 * * * *`, concurrency group
-  `status-check`, commits `data/` as `status-bot`, deploys `site/` via
-  actions/deploy-pages. Do not split into multiple workflows.
+- `.github/workflows/status.yml`: cron `7,37 * * * *` (every 30 min, offset
+  from :00/:30 — GitHub drops queued scheduled jobs at the top of the hour),
+  concurrency group `status-check`, commits `data/` as `status-bot`, deploys
+  `site/` via actions/deploy-pages. Do not split into multiple workflows.
 
 ## Conventions
 
