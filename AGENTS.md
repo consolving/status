@@ -39,9 +39,10 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 
 ## Workflow
 
-- Primary check path: **host-side** — `status-checker.timer` on host1 runs
-  `scripts/check.py` and pushes `data/` (deploy key). Every push to `main`
-  triggers `.github/workflows/deploy-on-push.yml` (the only deploy path).
+- Primary check paths: **host-side** — `status-checker.timer` on host1
+  (:12/:27/:42/:57) and host2 (:05/:20/:35/:50, staggered) each run
+  `scripts/check.py` and push `data/` (per-host deploy keys). Pushes trigger
+  `deploy-on-push.yml`; the stagger avoids same-instant push races.
 - Backup: `.github/workflows/status.yml` (`*/5` cron + dedupe step,
   `status-bot` commits) — check + commit only, **no deploy steps** (GitHub
   drops ~90% of its scheduled events, so deploys never hang off it).

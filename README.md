@@ -6,8 +6,11 @@ Static status page for consolving services, deployed via GitHub Pages at
 A GitHub Action re-renders the static HTML page from the check history on
 every push. Checks run every 15 minutes. Two check paths exist:
 
-1. **Primary — host-side checker** (`host1.consolving.net`): a systemd timer
-   (`status-checker.timer`, :12/:27/:42/:57) runs `scripts/check.py` locally and
+1. **Primary — host-side checkers**: systemd timers on `host1.consolving.net`
+   (`status-checker.timer`, :12/:27/:42/:57) and `host2.consolving.net`
+   (:05/:20/:35/:50, staggered) each run `scripts/check.py` locally and
+   push `data/` to GitHub via deploy keys (`/opt/status-checker/` on both
+   hosts, deploy keys `status-checker@host1`/`@host2` in the repo).
    pushes `data/` to GitHub via a deploy key (`/opt/status-checker/`).
    Every push to `main` triggers `.github/workflows/deploy-on-push.yml`,
    which re-renders and deploys the page. This path is reliable — GitHub
