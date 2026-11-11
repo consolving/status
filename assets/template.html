@@ -23,9 +23,11 @@
     background: #f5f5f4; color: var(--text);
   }
   main { max-width: 880px; margin: 0 auto; }
-  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1rem; justify-content: space-between; margin-bottom: 1.5rem; }
   h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.02em; }
   .updated { color: var(--muted); font-size: 0.8rem; }
+  .autorefresh { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
+  .autorefresh input { accent-color: #44403c; width: 14px; height: 14px; margin: 0; cursor: pointer; }
   .banner {
     padding: 1.1rem 1.4rem; border-radius: 10px; border: 1px solid;
     font-size: 1.05rem; font-weight: 600; margin-bottom: 1.5rem;
@@ -77,7 +79,10 @@
 <main>
   <header>
     <h1>consolving status</h1>
-    <span class="updated">updated <!-- GENERATED --></span>
+    <span style="display: inline-flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;">
+      <label class="autorefresh" title="Reload this page every 5 minutes"><input type="checkbox" id="autorefresh"> auto-update</label>
+      <span class="updated">updated <!-- GENERATED --></span>
+    </span>
   </header>
 
   <div class="banner <!-- OVERALL_CLASS -->"><!-- OVERALL_MESSAGE --></div>
@@ -87,5 +92,29 @@
   <h3>Recent incidents</h3>
   <!-- INCIDENTS -->
 </main>
+<script>
+(function () {
+  var KEY = 'status-autoupdate';
+  var PERIOD = 5 * 60 * 1000;
+  var box = document.getElementById('autorefresh');
+  var timer = null;
+
+  try {
+    if (localStorage.getItem(KEY) === '1') { box.checked = true; }
+  } catch (e) { /* storage unavailable (private mode) — toggle still works per page view */ }
+
+  function schedule() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (box.checked) { timer = setTimeout(function () { location.reload(); }, PERIOD); }
+  }
+
+  box.addEventListener('change', function () {
+    try { localStorage.setItem(KEY, box.checked ? '1' : '0'); } catch (e) {}
+    schedule();
+  });
+
+  schedule();
+})();
+</script>
 </body>
 </html>
