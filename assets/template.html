@@ -38,8 +38,8 @@
     background: #fff; border: 1px solid var(--border); border-radius: 10px;
     padding: 1.1rem 1.4rem; margin-bottom: 1rem;
   }
-  .host-head { display: flex; align-items: center; gap: 0.75rem; }
-  .host-head h2 { font-size: 1rem; margin: 0; font-weight: 600; }
+  .host-head { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+  .host-head h2 { font-size: 1rem; margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
   .latency { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
   .error-line { color: var(--error); font-size: 0.85rem; margin: 0.4rem 0 0; }
   .badge {
@@ -50,8 +50,8 @@
   .badge.warning { background: var(--warning-bg); color: var(--warning); }
   .badge.error   { background: var(--error-bg);   color: var(--error); }
   .badge.nodata  { background: var(--nodata-bg);  color: var(--nodata); }
-  .strip { display: flex; gap: 2px; margin: 0.9rem 0 0.7rem; }
-  .day { flex: 1; height: 30px; border-radius: 2px; min-width: 2px; }
+  .strip { display: flex; gap: 1px; margin: 0.9rem 0 0.7rem; }
+  .day { flex: 1; height: 30px; border-radius: 2px; min-width: 1px; }
   .day.ok      { background: var(--ok); }
   .day.warning { background: var(--warning); }
   .day.error   { background: var(--error); }
