@@ -25,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Dedupe schedule fires (run at most every ~30 min)
+      - name: Dedupe schedule fires (run at most every ~15 min)
         id: dedupe
         run: |
           last=$(git log -1 --format=%cI -- data/)
@@ -37,7 +37,7 @@ jobs:
           now_ts=$(date -u +%s)
           age_min=$(( (now_ts - last_ts) / 60 ))
           echo "Last data commit: $last (${age_min} min ago)"
-          if [ "$age_min" -lt 26 ]; then
+          if [ "$age_min" -lt 13 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Check all configured hosts and append the result to the history files.
 
-Runs every 30 minutes via .github/workflows/status.yml. Python stdlib only.
+Runs every 15 minutes (host-side systemd timer on host1, backup:
+.github/workflows/status.yml). Python stdlib only.
 
 Usage:
     python3 scripts/check.py [--config config/hosts.json] [--data-dir data]

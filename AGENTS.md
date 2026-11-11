@@ -8,7 +8,7 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 - `config/hosts.json` — monitored hosts (`name` + full `url` to the host's
   health-status daemon, default port `11012`, not routed through traefik).
 - `scripts/check.py` — check all hosts, append to `data/` history files,
-  prune retention. Run every 30 min by the workflow.
+  prune retention. Run every 15 min (host-side timer, backup workflow).
 - `scripts/generate.py` — render `site/index.html` from `data/`.
 - `assets/template.html` — template with `<!-- CONTENT -->` and `<!-- META -->`
   placeholders.
@@ -54,7 +54,7 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
   so gaps/duplicates never distort uptime math (uptime = runs without error /
   total runs).
 - The scheduled workflow's dedupe step skips runs when the newest `data/`
-  commit is younger than 26 minutes.
+  commit is younger than 13 minutes.
 
 ## Conventions
 
