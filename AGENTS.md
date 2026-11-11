@@ -7,6 +7,10 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 
 - `config/hosts.json` — monitored hosts (`name` + full `url` to the host's
   health-status daemon, default port `11012`, not routed through traefik).
+  Exception: `holonode` is VM 200 on host1 (Podman, no host1 Docker visibility);
+  its daemon is reached through a DNAT on host1 (`:11013` → `10.20.30.142:11012`,
+  see host1 README). The host-side checker uses the direct VM IP instead
+  (`/opt/status-checker/hosts-local.json`), same host `name` so history merges.
 - `scripts/check.py` — check all hosts, append to `data/` history files,
   prune retention. Run every 15 min (host-side timer, backup workflow).
 - `scripts/generate.py` — render `site/index.html` from `data/`.
