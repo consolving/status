@@ -80,7 +80,7 @@
   <header>
     <h1>consolving status</h1>
     <span style="display: inline-flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;">
-      <label class="autorefresh" title="Reload this page every 5 minutes"><input type="checkbox" id="autorefresh"> auto-update</label>
+      <label class="autorefresh" title="Refresh this page in place every 5 minutes"><input type="checkbox" id="autorefresh"> auto-update</label>
       <span class="updated">updated <!-- GENERATED --></span>
     </span>
   </header>
@@ -96,24 +96,58 @@
 (function () {
   var KEY = 'status-autoupdate';
   var PERIOD = 5 * 60 * 1000;
-  var box = document.getElementById('autorefresh');
+  var enabled = false;
   var timer = null;
+  var busy = false;
 
   try {
-    if (localStorage.getItem(KEY) === '1') { box.checked = true; }
+    enabled = localStorage.getItem(KEY) === '1';
   } catch (e) { /* storage unavailable (private mode) — toggle still works per page view */ }
 
-  function schedule() {
-    if (timer) { clearTimeout(timer); timer = null; }
-    if (box.checked) { timer = setTimeout(function () { location.reload(); }, PERIOD); }
+  function bindBox() {
+    var box = document.getElementById('autorefresh');
+    if (!box) return;
+    box.checked = enabled;
+    box.addEventListener('change', function () {
+      enabled = box.checked;
+      try { localStorage.setItem(KEY, enabled ? '1' : '0'); } catch (e) {}
+      if (enabled) { refresh(); start(); } else { stop(); }
+    });
   }
 
-  box.addEventListener('change', function () {
-    try { localStorage.setItem(KEY, box.checked ? '1' : '0'); } catch (e) {}
-    schedule();
-  });
+  function start() { stop(); timer = setInterval(refresh, PERIOD); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } }
 
-  schedule();
+  // In-place refresh: fetch the page itself and swap <main> (banner, host
+  // cards, day strips, incidents, updated timestamp). Header state outside
+  // <main> — the checkbox — is re-bound because it lives inside <main>.
+  function refresh() {
+    if (busy) return;
+    busy = true;
+    fetch(window.location.href, { cache: 'no-store' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function (html) {
+        var fresh = new DOMParser().parseFromString(html, 'text/html').querySelector('main');
+        var cur = document.querySelector('main');
+        if (!fresh || !cur) return;
+        cur.innerHTML = fresh.innerHTML;
+        bindBox();
+      })
+      .catch(function () {
+        var el = document.querySelector('.updated');
+        if (el) {
+          el.textContent = el.textContent.replace(/ · refresh failed.*$/, '')
+            + ' · refresh failed ' + new Date().toLocaleTimeString();
+        }
+      })
+      .finally(function () { busy = false; });
+  }
+
+  bindBox();
+  if (enabled) { start(); }
 })();
 </script>
 </body>
