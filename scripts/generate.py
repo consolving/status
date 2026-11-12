@@ -15,6 +15,12 @@ import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+# Data layer is UTC everywhere (check.py, history files, status.json).
+# All times shown on the page are rendered in local German time:
+# UTC+1 in winter (CET), UTC+2 in summer (CEST).
+LOCAL_TZ = ZoneInfo("Europe/Berlin")
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "template.html"
 STATUS_CATEGORIES = ("infrastructure", "workloads")
@@ -146,11 +152,13 @@ def category_grid(categories: dict | None) -> str:
 
 
 def day_strip(entries: list[dict], host: str, today: datetime) -> str:
+    """today must already be in LOCAL_TZ; days are local calendar days."""
     per_day: dict[str, list[str]] = {}
     for entry in entries:
         result = entry.get("hosts", {}).get(host)
         if result:
-            per_day.setdefault(entry["timestamp"][:10], []).append(result.get("status", "error"))
+            day = parse_ts(entry["timestamp"]).astimezone(LOCAL_TZ).strftime("%Y-%m-%d")
+            per_day.setdefault(day, []).append(result.get("status", "error"))
 
     bars = []
     for offset in range(DAYS_SHOWN - 1, -1, -1):
@@ -172,7 +180,8 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
     Under the line, 24 small thick ticks (one per hour) show the worst response
     status of that hour (green/yellow/red), aligned with the line's x axis.
     Hours without runs render grey — including the in-progress current hour.
-    A row of hour numbers below marks the hour of day (UTC). Scaled per host.
+    A row of hour numbers below marks the hour of day in LOCAL_TZ.
+    Scaled per host.
     """
     W, H = 240.0, 44.0
     PAD, LINE_BOTTOM = 4.0, 30.0
@@ -222,23 +231,24 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
     for i in range(24):
         s = ticks.get(i, "nodata")
         hour = now - timedelta(hours=23 - i)
+        local_hour = hour.astimezone(LOCAL_TZ)
         hour_runs = per_hour.get(hour.strftime("%Y-%m-%dT%H"), [])
         hour_lats = [lat for lat, _ in hour_runs if lat is not None]
         if hour_runs:
-            tip = hour.strftime("%b %d, %H:00 UTC") + " — " + s
+            tip = local_hour.strftime("%b %d, %H:00 %Z") + " — " + s
             if hour_lats:
                 tip += f", avg {int(round(sum(hour_lats) / len(hour_lats)))} ms"
         else:
             # Empty either because the checker was down, or because the current
             # hour is still in progress and its first run is pending.
-            tip = hour.strftime("%b %d, %H:00 UTC") + " — " + (
+            tip = local_hour.strftime("%b %d, %H:00 %Z") + " — " + (
                 "no data yet" if hour <= now < hour + timedelta(hours=1) else "no data")
         rects += (
             f'<rect x="{x(i) - TICK_W / 2:.1f}" y="{H - TICK_H - 1:.1f}" '
             f'width="{TICK_W:.0f}" height="{TICK_H:.0f}" rx="1" fill="{tick_colors[s]}">'
             f"<title>{tip}</title></rect>"
         )
-        labels += f'<span title="{tip}">{hour.strftime("%H")}</span>'
+        labels += f'<span title="{tip}">{local_hour.strftime("%H")}</span>'
 
     svg = f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" ' \
           f'aria-label="average response time per hour, last 24 hours">'
@@ -294,7 +304,7 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
         f'<div class="host-head"><h2>{html.escape(host)}</h2>{badge(current_status)}'
         f'<span class="latency">{latency.strip(" ·")}</span></div>'
         f'{error_line}'
-        f'{day_strip(entries, host, now)}'
+        f'{day_strip(entries, host, now.astimezone(LOCAL_TZ))}'
         f'{latency_graph(entries, host, now)}'
         f'{category_grid(current.get("categories") if current else None)}'
         f'<div class="uptimes">{"".join(uptimes)}</div>'
@@ -320,7 +330,7 @@ def render_incidents(entries: list[dict]) -> str:
                     ]
                     detail = ", ".join(parts) or "degraded"
                 incidents.append(
-                    f'<li><span class="ts">{entry["timestamp"]}</span> '
+                    f'<li><span class="ts">{parse_ts(entry["timestamp"]).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")}</span> '
                     f"<strong>{html.escape(name)}</strong> "
                     f'{badge(result["status"])} — {html.escape(str(detail))}</li>'
                 )
@@ -368,7 +378,7 @@ def main() -> int:
 
     content = "".join(render_host(entries, yearly, host, now) for host in hosts)
     incidents = render_incidents(entries)
-    generated = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    generated = now.astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S %Z")
 
     template = TEMPLATE.read_text(encoding="utf-8")
     page = (
