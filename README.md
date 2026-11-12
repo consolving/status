@@ -31,8 +31,8 @@ GitHub Action (cron */30)
                               └─ deployed to GitHub Pages
 ```
 
-Each checked host runs the small [health-status](../health-status) daemon
-(private repo on git-lab.de) which answers with a JSON like:
+Each checked host runs the small health-status daemon
+(private repo, not linked here) which answers with a JSON like:
 
 ```json
 {
