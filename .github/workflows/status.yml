@@ -2,12 +2,13 @@ name: status check
 
 on:
   schedule:
-    # Backup path only: GitHub drops the vast majority of scheduled events
-    # for this repo (~4 of 48 per day, slot-independent). The primary check
-    # runs on host1 via systemd timer and pushes data/, which triggers
-    # deploy-on-push.yml. This workflow checks + commits; deploys happen via
-    # deploy-on-push.
-    - cron: "*/5 * * * *"
+    # Backup path only: runs when no host-side push happened in the last 13
+    # minutes (dedupe below) — i.e. when a checker host is down. Hosts push at
+    # :12/:42 (host1) and :27/:57 (host2); deploys happen via deploy-on-push.
+    # GitHub drops the vast majority of scheduled events for this repo
+    # (~4 of 48 per day, slot-independent), hence the tight base cadence is
+    # not needed and */15 keeps noise down.
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:

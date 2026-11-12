@@ -7,15 +7,15 @@ A GitHub Action re-renders the static HTML page from the check history on
 every push. Checks run every 15 minutes. Two check paths exist:
 
 1. **Primary — host-side checkers**: systemd timers on `host1.consolving.net`
-   (`status-checker.timer`, :12/:27/:42/:57) and `host2.consolving.net`
-   (:05/:20/:35/:50, staggered) each run `scripts/check.py` locally and
-   push `data/` to GitHub via deploy keys (`/opt/status-checker/` on both
-   hosts, deploy keys `status-checker@host1`/`@host2` in the repo).
+   (:12/:42) and `host2.consolving.net` (:27/:57) each run `scripts/check.py`
+   every 30 min, interleaved so `data/` gets a push every 15 minutes, and
+   push to GitHub via deploy keys (`/opt/status-checker/` on both hosts,
+   deploy keys `status-checker@host1`/`@host2` in the repo).
    pushes `data/` to GitHub via a deploy key (`/opt/status-checker/`).
    Every push to `main` triggers `.github/workflows/deploy-on-push.yml`,
    which re-renders and deploys the page. This path is reliable — GitHub
    drops the vast majority of scheduled workflow events.
-2. **Backup — scheduled workflow** (`status.yml`, `*/5` + dedupe to ~15 min):
+2. **Backup — scheduled workflow** (`status.yml`, `*/15` + dedupe to ~15 min):
    checks + commits only, no deploy. Exists in case host1 is down.
 
 ## How it works

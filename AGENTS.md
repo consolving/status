@@ -44,10 +44,12 @@ Status page for consolving services (GitHub Pages). Python stdlib only —
 ## Workflow
 
 - Primary check paths: **host-side** — `status-checker.timer` on host1
-  (:12/:27/:42/:57) and host2 (:05/:20/:35/:50, staggered) each run
-  `scripts/check.py` and push `data/` (per-host deploy keys). Pushes trigger
-  `deploy-on-push.yml`; the stagger avoids same-instant push races.
-- Backup: `.github/workflows/status.yml` (`*/5` cron + dedupe step,
+  (:12/:42) and host2 (:27/:57), 30-min cadence each, interleaved to one
+  `data/` push every 15 min (per-host deploy keys). Pushes trigger
+  `deploy-on-push.yml`; ~15-min spacing avoids Pages-deploy cancel races.
+  If one host is down, the other still pushes every 30 min and the backup
+  workflow below fills the gap.
+- Backup: `.github/workflows/status.yml` (`*/15` cron + dedupe step,
   `status-bot` commits) — check + commit only, **no deploy steps** (GitHub
   drops ~90% of its scheduled events, so deploys never hang off it).
 - Secrets: `HEALTH_STATUS_TOKEN` (bearer token for the daemons).
