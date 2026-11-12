@@ -166,6 +166,61 @@ def day_strip(entries: list[dict], host: str, today: datetime) -> str:
     return f'<div class="strip">{"".join(bars)}</div>'
 
 
+def latency_graph(entries: list[dict], host: str, today: datetime) -> str:
+    """Small SVG sparkline: average response time per day over DAYS_SHOWN.
+
+    Days without latency data (unreachable runs, no history yet) leave a gap
+    in the line. Scaled per host, aligned with the day strip above it.
+    """
+    per_day: dict[str, list[float]] = {}
+    for entry in entries:
+        result = entry.get("hosts", {}).get(host)
+        if result:
+            lat = result.get("latency_ms")
+            if lat is not None:
+                per_day.setdefault(entry["timestamp"][:10], []).append(lat)
+
+    values = []
+    for offset in range(DAYS_SHOWN - 1, -1, -1):
+        day = (today - timedelta(days=offset)).strftime("%Y-%m-%d")
+        lats = per_day.get(day)
+        if lats:
+            # bar index of that day in the strip: offset 0 (today) is last
+            values.append((DAYS_SHOWN - 1 - offset, sum(lats) / len(lats)))
+
+    W, H, PAD = 900.0, 44.0, 4.0
+    step = W / DAYS_SHOWN
+    if not values:
+        return '<div class="latency-graph"><span class="empty">no response time data</span></div>'
+
+    top = max(v for _, v in values) * 1.15 or 1.0
+
+    def x(i: int) -> float:
+        return (i + 0.5) * step
+
+    def y(v: float) -> float:
+        return H - PAD - (v / top) * (H - 2 * PAD)
+
+    parts = []
+    prev_i = None
+    for i, v in values:
+        cmd = "M" if prev_i is None or i != prev_i + 1 else "L"
+        parts.append(f"{cmd}{x(i):.1f},{y(v):.1f}")
+        prev_i = i
+    path = " ".join(parts)
+
+    last_i, last_v = values[-1]
+    peak = max(v for _, v in values)
+    return (
+        f'<div class="latency-graph" title="response time per day (avg ms), peak {int(round(peak))} ms">'
+        f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" '
+        f'aria-label="average response time per day">'
+        f'<path d="{path}"/>'
+        f'<circle cx="{x(last_i):.1f}" cy="{y(last_v):.1f}" r="3"/>'
+        f"</svg></div>"
+    )
+
+
 def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetime) -> str:
     host_runs = [e["hosts"][host] for e in entries if host in e.get("hosts", {})]
     current = host_runs[-1] if host_runs else None
@@ -205,6 +260,7 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
         f'<span class="latency">{latency.strip(" ·")}</span></div>'
         f'{error_line}'
         f'{day_strip(entries, host, now)}'
+        f'{latency_graph(entries, host, now)}'
         f'{category_grid(current.get("categories") if current else None)}'
         f'<div class="uptimes">{"".join(uptimes)}</div>'
         f"</section>"
