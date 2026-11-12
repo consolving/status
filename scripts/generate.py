@@ -169,9 +169,10 @@ def day_strip(entries: list[dict], host: str, today: datetime) -> str:
 def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
     """SVG sparkline: average response time per hour over the last 24 hours.
 
-    Under the line, one small thick tick per hour shows the worst response
+    Under the line, 24 small thick ticks (one per hour) show the worst response
     status of that hour (green/yellow/red), aligned with the line's x axis.
-    Hours without runs leave a gap. Scaled per host.
+    Hours without runs render grey — including the in-progress current hour.
+    A row of hour numbers below marks the hour of day (UTC). Scaled per host.
     """
     W, H = 240.0, 44.0
     PAD, LINE_BOTTOM = 4.0, 30.0
@@ -185,7 +186,7 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
             per_hour.setdefault(entry["timestamp"][:13], []).append(
                 (result.get("latency_ms"), result.get("status", "nodata")))
 
-    points, ticks = [], []
+    points, ticks = [], {}
     for h in range(23, -1, -1):
         hour = now - timedelta(hours=h)
         runs = per_hour.get(hour.strftime("%Y-%m-%dT%H"), [])
@@ -194,7 +195,7 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
         if lats:
             points.append((idx, sum(lats) / len(lats)))
         if runs:
-            ticks.append((idx, worst([s for _, s in runs])))
+            ticks[idx] = worst([s for _, s in runs])
 
     if not points and not ticks:
         return '<div class="latency-graph"><span class="empty">no response time data</span></div>'
@@ -217,19 +218,27 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
 
     tick_colors = {"ok": "var(--ok)", "warning": "var(--warning)",
                    "error": "var(--error)", "nodata": "var(--nodata)"}
-    rects = ""
-    for i, s in ticks:
+    rects, labels = "", ""
+    for i in range(24):
+        s = ticks.get(i, "nodata")
         hour = now - timedelta(hours=23 - i)
         hour_runs = per_hour.get(hour.strftime("%Y-%m-%dT%H"), [])
         hour_lats = [lat for lat, _ in hour_runs if lat is not None]
-        tip = hour.strftime("%b %d, %H:00 UTC") + " — " + s
-        if hour_lats:
-            tip += f", avg {int(round(sum(hour_lats) / len(hour_lats)))} ms"
+        if hour_runs:
+            tip = hour.strftime("%b %d, %H:00 UTC") + " — " + s
+            if hour_lats:
+                tip += f", avg {int(round(sum(hour_lats) / len(hour_lats)))} ms"
+        else:
+            # Empty either because the checker was down, or because the current
+            # hour is still in progress and its first run is pending.
+            tip = hour.strftime("%b %d, %H:00 UTC") + " — " + (
+                "no data yet" if hour <= now < hour + timedelta(hours=1) else "no data")
         rects += (
             f'<rect x="{x(i) - TICK_W / 2:.1f}" y="{H - TICK_H - 1:.1f}" '
             f'width="{TICK_W:.0f}" height="{TICK_H:.0f}" rx="1" fill="{tick_colors[s]}">'
             f"<title>{tip}</title></rect>"
         )
+        labels += f'<span title="{tip}">{hour.strftime("%H")}</span>'
 
     svg = f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" ' \
           f'aria-label="average response time per hour, last 24 hours">'
@@ -243,6 +252,7 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
     return (
         f'<div class="latency-graph" title="response time last 24h (avg per hour), peak {int(round(peak))} ms">'
         f"{svg}</div>"
+        f'<div class="hour-labels" aria-hidden="true">{labels}</div>'
     )
 
 
