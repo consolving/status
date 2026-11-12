@@ -175,7 +175,7 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
     """
     W, H = 240.0, 44.0
     PAD, LINE_BOTTOM = 4.0, 30.0
-    TICK_H, TICK_W = 4.0, 8.0
+    TICK_H, TICK_W = 6.0, 8.0
     step = W / 24.0
 
     per_hour: dict[str, list[tuple]] = {}
@@ -217,10 +217,19 @@ def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
 
     tick_colors = {"ok": "var(--ok)", "warning": "var(--warning)",
                    "error": "var(--error)", "nodata": "var(--nodata)"}
-    rects = "".join(
-        f'<rect x="{x(i) - TICK_W / 2:.1f}" y="{H - TICK_H - 1:.1f}" '
-        f'width="{TICK_W:.0f}" height="{TICK_H:.0f}" rx="1" fill="{tick_colors[s]}"/>'
-        for i, s in ticks)
+    rects = ""
+    for i, s in ticks:
+        hour = now - timedelta(hours=23 - i)
+        hour_runs = per_hour.get(hour.strftime("%Y-%m-%dT%H"), [])
+        hour_lats = [lat for lat, _ in hour_runs if lat is not None]
+        tip = hour.strftime("%b %d, %H:00 UTC") + " — " + s
+        if hour_lats:
+            tip += f", avg {int(round(sum(hour_lats) / len(hour_lats)))} ms"
+        rects += (
+            f'<rect x="{x(i) - TICK_W / 2:.1f}" y="{H - TICK_H - 1:.1f}" '
+            f'width="{TICK_W:.0f}" height="{TICK_H:.0f}" rx="1" fill="{tick_colors[s]}">'
+            f"<title>{tip}</title></rect>"
+        )
 
     svg = f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" ' \
           f'aria-label="average response time per hour, last 24 hours">'
