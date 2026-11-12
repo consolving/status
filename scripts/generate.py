@@ -166,58 +166,74 @@ def day_strip(entries: list[dict], host: str, today: datetime) -> str:
     return f'<div class="strip">{"".join(bars)}</div>'
 
 
-def latency_graph(entries: list[dict], host: str, today: datetime) -> str:
-    """Small SVG sparkline: average response time per day over DAYS_SHOWN.
+def latency_graph(entries: list[dict], host: str, now: datetime) -> str:
+    """SVG sparkline: average response time per hour over the last 24 hours.
 
-    Days without latency data (unreachable runs, no history yet) leave a gap
-    in the line. Scaled per host, aligned with the day strip above it.
+    Under the line, one small thick tick per hour shows the worst response
+    status of that hour (green/yellow/red), aligned with the line's x axis.
+    Hours without runs leave a gap. Scaled per host.
     """
-    per_day: dict[str, list[float]] = {}
+    W, H = 240.0, 44.0
+    PAD, LINE_BOTTOM = 4.0, 30.0
+    TICK_H, TICK_W = 4.0, 8.0
+    step = W / 24.0
+
+    per_hour: dict[str, list[tuple]] = {}
     for entry in entries:
         result = entry.get("hosts", {}).get(host)
         if result:
-            lat = result.get("latency_ms")
-            if lat is not None:
-                per_day.setdefault(entry["timestamp"][:10], []).append(lat)
+            per_hour.setdefault(entry["timestamp"][:13], []).append(
+                (result.get("latency_ms"), result.get("status", "nodata")))
 
-    values = []
-    for offset in range(DAYS_SHOWN - 1, -1, -1):
-        day = (today - timedelta(days=offset)).strftime("%Y-%m-%d")
-        lats = per_day.get(day)
+    points, ticks = [], []
+    for h in range(23, -1, -1):
+        hour = now - timedelta(hours=h)
+        runs = per_hour.get(hour.strftime("%Y-%m-%dT%H"), [])
+        idx = 23 - h
+        lats = [lat for lat, _ in runs if lat is not None]
         if lats:
-            # bar index of that day in the strip: offset 0 (today) is last
-            values.append((DAYS_SHOWN - 1 - offset, sum(lats) / len(lats)))
+            points.append((idx, sum(lats) / len(lats)))
+        if runs:
+            ticks.append((idx, worst([s for _, s in runs])))
 
-    W, H, PAD = 900.0, 44.0, 4.0
-    step = W / DAYS_SHOWN
-    if not values:
+    if not points and not ticks:
         return '<div class="latency-graph"><span class="empty">no response time data</span></div>'
 
-    top = max(v for _, v in values) * 1.15 or 1.0
+    top = max((v for _, v in points), default=0.0) * 1.15 or 1.0
 
     def x(i: int) -> float:
         return (i + 0.5) * step
 
     def y(v: float) -> float:
-        return H - PAD - (v / top) * (H - 2 * PAD)
+        return PAD + (1 - v / top) * (LINE_BOTTOM - PAD)
 
     parts = []
     prev_i = None
-    for i, v in values:
+    for i, v in points:
         cmd = "M" if prev_i is None or i != prev_i + 1 else "L"
         parts.append(f"{cmd}{x(i):.1f},{y(v):.1f}")
         prev_i = i
     path = " ".join(parts)
 
-    last_i, last_v = values[-1]
-    peak = max(v for _, v in values)
+    tick_colors = {"ok": "var(--ok)", "warning": "var(--warning)",
+                   "error": "var(--error)", "nodata": "var(--nodata)"}
+    rects = "".join(
+        f'<rect x="{x(i) - TICK_W / 2:.1f}" y="{H - TICK_H - 1:.1f}" '
+        f'width="{TICK_W:.0f}" height="{TICK_H:.0f}" rx="1" fill="{tick_colors[s]}"/>'
+        for i, s in ticks)
+
+    svg = f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" ' \
+          f'aria-label="average response time per hour, last 24 hours">'
+    if path:
+        svg += f'<path d="{path}"/>'
+        li, lv = points[-1]
+        svg += f'<circle cx="{x(li):.1f}" cy="{y(lv):.1f}" r="2.5"/>'
+    svg += rects + "</svg>"
+
+    peak = max((v for _, v in points), default=0.0)
     return (
-        f'<div class="latency-graph" title="response time per day (avg ms), peak {int(round(peak))} ms">'
-        f'<svg viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" role="img" '
-        f'aria-label="average response time per day">'
-        f'<path d="{path}"/>'
-        f'<circle cx="{x(last_i):.1f}" cy="{y(last_v):.1f}" r="3"/>'
-        f"</svg></div>"
+        f'<div class="latency-graph" title="response time last 24h (avg per hour), peak {int(round(peak))} ms">'
+        f"{svg}</div>"
     )
 
 
