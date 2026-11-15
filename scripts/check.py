@@ -114,6 +114,7 @@ def check_host(host: dict, token: str = "") -> dict:
             payload = json.loads(body)
             counts = normalize_categories(payload)
             result["categories"] = counts
+            result["version"] = payload.get("version", "unknown")
             worst = "ok"
             for cat in STATUS_CATEGORIES:
                 c = counts[cat]

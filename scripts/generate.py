@@ -293,6 +293,8 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
     )
 
     latency = f' · {current["latency_ms"]} ms' if current and current.get("latency_ms") is not None else ""
+    version = current.get("version") if current else None
+    version_html = f'<span class="version">v{html.escape(version)}</span>' if version else ""
     error_line = (
         f'<p class="error-line">⚠ {html.escape(current["error"])}</p>'
         if current and current.get("error")
@@ -302,7 +304,7 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
     return (
         f'<section class="host" id="host-{html.escape(host)}">'
         f'<div class="host-head"><h2>{html.escape(host)}</h2>{badge(current_status)}'
-        f'<span class="latency">{latency.strip(" ·")}</span></div>'
+        f'{version_html}<span class="latency">{latency.strip(" ·")}</span></div>'
         f'{error_line}'
         f'{day_strip(entries, host, now.astimezone(LOCAL_TZ))}'
         f'{latency_graph(entries, host, now)}'
@@ -313,32 +315,80 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
 
 
 def render_incidents(entries: list[dict]) -> str:
+    """Build incident + resolution timeline.
+
+    Tracks last known status per host. When status transitions from
+    error/warning → ok, emits a 'resolved' entry. Returns HTML with both.
+    """
     incidents = []
-    for entry in reversed(entries):
+    resolutions = []
+    last_status: dict[str, str] = {}
+
+    # Iterate chronologically so we see transitions in order
+    for entry in entries:
+        ts = parse_ts(entry["timestamp"]).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
         for name, result in entry.get("hosts", {}).items():
-            if result.get("status") == "error" or result.get("status") == "warning":
-                detail = result.get("error")
-                if not detail:
-                    cats = normalize_categories(result.get("categories") or {})
-                    parts = [
-                        f"{cat}: error" for cat in ("infrastructure", "workloads")
-                        if (cats.get(cat) or {}).get("error")
-                    ]
-                    parts += [
-                        f"{cat}: warning" for cat in ("infrastructure", "workloads")
-                        if not (cats.get(cat) or {}).get("error") and (cats.get(cat) or {}).get("warning")
-                    ]
-                    detail = ", ".join(parts) or "degraded"
-                incidents.append(
-                    f'<li><span class="ts">{parse_ts(entry["timestamp"]).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")}</span> '
+            status = result.get("status", "error")
+            prev = last_status.get(name, "ok")
+
+            if status in ("error", "warning"):
+                # New incident or continuing — only log if different from previous
+                if status != prev:
+                    detail = result.get("error")
+                    if not detail:
+                        cats = normalize_categories(result.get("categories") or {})
+                        parts = [
+                            f"{cat}: error" for cat in ("infrastructure", "workloads")
+                            if (cats.get(cat) or {}).get("error")
+                        ]
+                        parts += [
+                            f"{cat}: warning" for cat in ("infrastructure", "workloads")
+                            if not (cats.get(cat) or {}).get("error") and (cats.get(cat) or {}).get("warning")
+                        ]
+                        detail = ", ".join(parts) or "degraded"
+                    incidents.append(
+                        f'<li class="incident"><span class="ts">{ts}</span> '
+                        f"<strong>{html.escape(name)}</strong> "
+                        f'{badge(status)} — {html.escape(str(detail))}</li>'
+                    )
+            elif status == "ok" and prev in ("error", "warning"):
+                # Resolution
+                resolutions.append(
+                    f'<li class="resolution"><span class="ts">{ts}</span> '
                     f"<strong>{html.escape(name)}</strong> "
-                    f'{badge(result["status"])} — {html.escape(str(detail))}</li>'
+                    f'{badge("ok")} — recovered (was {prev})</li>'
                 )
-        if len(incidents) >= MAX_INCIDENTS:
+
+            last_status[name] = status
+
+    # Sort both lists by timestamp descending (most recent first)
+    def extract_ts(s: str) -> str:
+        # Extract "YYYY-MM-DD HH:MM" from <span class="ts">...</span>
+        import re
+        m = re.search(r'<span class="ts">([^<]+)</span>', s)
+        return m.group(1) if m else ""
+
+    incidents.sort(key=extract_ts, reverse=True)
+    resolutions.sort(key=extract_ts, reverse=True)
+
+    # Merge: most recent first, capped
+    timeline = []
+    i = r = 0
+    while (i < len(incidents) or r < len(resolutions)) and len(timeline) < MAX_INCIDENTS:
+        inc_ts = extract_ts(incidents[i]) if i < len(incidents) else ""
+        res_ts = extract_ts(resolutions[r]) if r < len(resolutions) else ""
+        if inc_ts and (not res_ts or inc_ts >= res_ts):
+            timeline.append(incidents[i])
+            i += 1
+        elif res_ts:
+            timeline.append(resolutions[r])
+            r += 1
+        else:
             break
-    if not incidents:
+
+    if not timeline:
         return '<p class="muted">No incidents recorded. 🎉</p>'
-    return f'<ul class="incidents">{"".join(incidents[:MAX_INCIDENTS])}</ul>'
+    return f'<ul class="incidents">{"".join(timeline)}</ul>'
 
 
 def main() -> int:
@@ -418,6 +468,7 @@ def main() -> int:
             "http_status": current.get("http_status") if current else None,
             "categories": current.get("categories") if current else None,
             "error": current.get("error") if current else None,
+            "version": current.get("version") if current else None,
             "uptime": up,
         }
 
