@@ -293,8 +293,6 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
     )
 
     latency = f' · {current["latency_ms"]} ms' if current and current.get("latency_ms") is not None else ""
-    version = current.get("version") if current else None
-    version_html = f'<span class="version">v{html.escape(version)}</span>' if version else ""
     error_line = (
         f'<p class="error-line">⚠ {html.escape(current["error"])}</p>'
         if current and current.get("error")
@@ -304,7 +302,7 @@ def render_host(entries: list[dict], yearly: list[dict], host: str, now: datetim
     return (
         f'<section class="host" id="host-{html.escape(host)}">'
         f'<div class="host-head"><h2>{html.escape(host)}</h2>{badge(current_status)}'
-        f'{version_html}<span class="latency">{latency.strip(" ·")}</span></div>'
+        f'<span class="latency">{latency.strip(" ·")}</span></div>'
         f'{error_line}'
         f'{day_strip(entries, host, now.astimezone(LOCAL_TZ))}'
         f'{latency_graph(entries, host, now)}'
