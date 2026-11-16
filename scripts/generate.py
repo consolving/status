@@ -23,7 +23,7 @@ from zoneinfo import ZoneInfo
 LOCAL_TZ = ZoneInfo("Europe/Berlin")
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "template.html"
-STATUS_CATEGORIES = ("infrastructure", "workloads")
+STATUS_CATEGORIES = ("system", "infrastructure", "workloads")
 SEVERITY = {"ok": 0, "warning": 1, "error": 2}
 WINDOWS = [("24h", 1), ("7d", 7), ("30d", 30), ("90d", 90)]
 DAYS_SHOWN = 90
@@ -41,10 +41,10 @@ def normalize_categories(categories: dict) -> dict:
     """Normalize stored category counts to the current names.
 
     Legacy history entries use private / public / customers / unknown;
-    current ones use infrastructure / workloads. Everything legacy lands in
+    current ones use infrastructure / workloads / system. Everything legacy lands in
     infrastructure or workloads — there is no separate unknown bucket.
     """
-    counts = {"infrastructure": {}, "workloads": {}}
+    counts = {"infrastructure": {}, "workloads": {}, "system": {}}
     for cat, value in (categories or {}).items():
         counts[LEGACY_CATEGORIES.get(cat, cat if cat in counts else "workloads")] = dict(value)
     for legacy in ("public", "customers", "unknown"):

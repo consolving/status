@@ -25,7 +25,7 @@ RETENTION = {"daily": 90, "weekly": 104, "monthly": 24}  # yearly: keep all
 
 CHECK_TIMEOUT = 30  # seconds per host (host1's daemon takes ~6s: many docker inspects + ldap + hairpin)
 SEVERITY = {"ok": 0, "warning": 1, "error": 2}
-STATUS_CATEGORIES = ("infrastructure", "workloads")
+STATUS_CATEGORIES = ("system", "infrastructure", "workloads")
 
 LEGACY_CATEGORIES = {
     "private": "infrastructure",
@@ -39,12 +39,13 @@ def normalize_categories(payload: dict) -> dict:
     """Normalize a daemon payload to the current categories.
 
     Accepts legacy responses (private / public / customers / unknown) as well
-    as the current ones (infrastructure / workloads). Everything legacy lands
+    as the current ones (infrastructure / workloads / system). Everything legacy lands
     in infrastructure or workloads; there is no separate unknown bucket.
     """
     counts = {
         "infrastructure": dict(payload.get("infrastructure") or payload.get("private") or {}),
         "workloads": dict(payload.get("workloads") or {}),
+        "system": dict(payload.get("system") or {}),
     }
     for legacy, target in (("public", "workloads"), ("customers", "workloads"), ("unknown", "workloads")):
         for key, value in (payload.get(legacy) or {}).items():
